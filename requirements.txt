@@ -1,13 +1,7 @@
-requests
-Charts
-mysql_setting
 pandas
 numpy
 streamlit==1.22.0
 click==8
-matplotlib
-altair
-plotly
 streamlit-echarts
 pyecharts
 pymysql
