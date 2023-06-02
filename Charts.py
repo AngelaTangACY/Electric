@@ -12,7 +12,7 @@ import streamlit.components.v1 as components
 from pyecharts.commons.utils import JsCode
 
 mysql_setting = {
-    'host': "localhost",
+    'host': "192.168.1.3",
     'port': 3306,
     'user': "root",
     'password': '123456',
