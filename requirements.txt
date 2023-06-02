@@ -16,3 +16,4 @@ pyecharts
 pymysql
 datetime
 Charts
+mysql_setting
