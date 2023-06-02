@@ -29,7 +29,7 @@ def connect(host, port, user, password, database):
                               database=database,
                               charset='utf8')
     cursor = connect.cursor()
-    return connect()
+    return connect
 
 
 # 绘制日前市场供需情况:省内负荷、外送、新能源、竞价空间图
@@ -551,7 +551,7 @@ def draw_jjkj_curve(df_compete, date_list):
 
 
 if __name__ == '__main__':
-    ch = connect("localhost", 3306, "user", '123456','data')
+    conn = connect("localhost", 3306, "user", '123456','data')
     # price_jjkj = ch.draw_price_jjkj()  # 绘制价格与竞价空间
     # price_jjkj_html = price_jjkj.render_embed()
     st.set_page_config(layout="wide")
@@ -567,7 +567,7 @@ if __name__ == '__main__':
     if agree == '市场动态':
         if scdt == '信息看板':
             sql = "select * from 总表 where 预测 = 0"
-            df_info_board = pd.read_sql(sql, ch.connect)
+            df_info_board = pd.read_sql(sql, conn)
             df_info_board['运行时间'] = df_info_board['运行日期'].map(str) + ' ' + df_info_board['时间'].map(str)
             begin_date = c21.selectbox('开始日期', df_info_board['运行日期'].sort_values(ascending=False).unique().tolist(),
                                        index=0)
@@ -576,20 +576,20 @@ if __name__ == '__main__':
                 ascending=False).unique().tolist(), index=0)
             df_info = df_info_board[(pd.to_datetime(df_info_board['运行日期']) >= pd.to_datetime(begin_date)) & (
                 pd.to_datetime(df_info_board['运行日期']) <= pd.to_datetime(end_date))]
-            e_energy, e_market_price = ch.draw_info_board(df_info)  # 绘制日前市场供需情况
+            e_energy, e_market_price = draw_info_board(df_info)  # 绘制日前市场供需情况
             st_pyecharts(e_energy, theme=ThemeType.WALDEN, height='500px')
             st_pyecharts(e_market_price, theme=ThemeType.WALDEN, height='500px')
 
         elif scdt == '交易结果':
             sql = "select * from 滚动交易"
-            df_trade_result = pd.read_sql(sql, ch.connect)
+            df_trade_result = pd.read_sql(sql, conn)
             trade_date = c21.selectbox('交易日', df_trade_result['交易日'].sort_values(ascending=False).unique().tolist(),
                                        index=0)
             run_date = c22.selectbox('运行日',
                                      df_trade_result['运行日'][df_trade_result['交易日'] == trade_date].unique().tolist(),
                                      index=0)
             df_trade = df_trade_result[(df_trade_result['交易日'] == trade_date) & (df_trade_result['运行日'] == run_date)]
-            e_trade_result = ch.draw_trade_result(df_trade)
+            e_trade_result = draw_trade_result(df_trade)
             # c92.metric(label='总交易电量', value='{}MWh'.format(df_trade['交易电量(日均)'].sum().round(3)))
             # with c91:
             st_pyecharts(e_trade_result, theme=ThemeType.PURPLE_PASSION, height='500px')
@@ -602,10 +602,10 @@ if __name__ == '__main__':
                                            df_trade_result['运行日'].sort_values(ascending=False).unique().tolist(),
                                            index=24)
                 df_profit = df_trade_result[df_trade_result['运行日'] == exec_date]
-                e_profit = ch.draw_profit_result(df_profit, '运行日')
+                e_profit = draw_profit_result(df_profit, '运行日')
             elif mode == '交易日-运行日':
                 df_profit = df_trade
-                e_profit = ch.draw_profit_result(df_profit, '交易日-运行日')
+                e_profit = draw_profit_result(df_profit, '交易日-运行日')
 
             st_pyecharts(e_profit, theme=ThemeType.WALDEN, height='500px')
             # c_2.metric(label='总盈亏', value='{}万元'.format(df_profit['总盈亏(万元)'].sum().round(3)))
@@ -618,7 +618,7 @@ if __name__ == '__main__':
         if scfx == '现货价格分析':
             tab1, tab2, tab3 = st.tabs(['📈日前或实时价格', '📈日前实时价格对比', '📈价格与竞价空间趋势'])
             sql = "select * from 总表 where 预测 = 0"
-            df_info_price = pd.read_sql(sql, ch.connect)
+            df_info_price = pd.read_sql(sql, conn)
 
             with tab1:
                 t1_cc51, t1_cc52, t1_cc53, t1_cc54, t1_cc55 = tab1.columns([1, 1, 2, 2, 1])
@@ -670,9 +670,9 @@ if __name__ == '__main__':
                     pd.to_datetime(df_info_price['运行日期']) <= pd.to_datetime(end_date))]
 
                 if is_compress == '压缩':
-                    e_date, e_time = ch.draw_price_compare(df_price, True, begin_date, end_date)
+                    e_date, e_time = draw_price_compare(df_price, True, begin_date, end_date)
                 else:
-                    e_date, e_time = ch.draw_price_compare(df_price, False, begin_date, end_date)
+                    e_date, e_time = draw_price_compare(df_price, False, begin_date, end_date)
 
                 with t2_cc21:
                     st_pyecharts(e_date, theme=ThemeType.WALDEN, height='500px')
@@ -689,12 +689,12 @@ if __name__ == '__main__':
                     ascending=False).unique().tolist(), index=0, key='tab3_end_date')
                 df_compete = df_info_price[(pd.to_datetime(df_info_price['运行日期']) >= pd.to_datetime(begin_date)) & (
                 pd.to_datetime(df_info_price['运行日期']) <= pd.to_datetime(end_date))]
-                e_compete = ch.draw_price_jjkj(df_compete, is_compress)
+                e_compete = draw_price_jjkj(df_compete, is_compress)
                 st_pyecharts(e_compete, theme=ThemeType.WALDEN, height='500px')
         elif scfx == '竞价空间分析':
             tab1, tab2 = st.tabs(['供给曲线拟合-竞价空间', '竞价空间分析'])
             sql = "select * from 总表 where 预测 = 0"
-            df_info_compete = pd.read_sql(sql, ch.connect)
+            df_info_compete = pd.read_sql(sql, conn)
 
             with tab1:
                 c21, c22 = st.columns(2)
@@ -722,7 +722,7 @@ if __name__ == '__main__':
                         df = df_info_compete[pd.to_datetime(df_info_compete['运行日期']) == pd.to_datetime(date)]
                         df_compete = pd.concat([df_compete, df], axis=0)
 
-                e_compete, e_compete_percent, e_compete_3d = ch.draw_jjkj_curve(df_compete, datelist)
+                e_compete, e_compete_percent, e_compete_3d = draw_jjkj_curve(df_compete, datelist)
                 st_pyecharts(e_compete, theme=ThemeType.WALDEN, height='600px')
                 st_pyecharts(e_compete_percent, theme=ThemeType.WALDEN, height='600px')
                 st_pyecharts(e_compete_3d, theme=ThemeType.WALDEN, height='700px')
