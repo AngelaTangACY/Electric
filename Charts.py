@@ -12,7 +12,7 @@ import streamlit.components.v1 as components
 from pyecharts.commons.utils import JsCode
 
 mysql_setting = {
-    'host': "192.168.1.3",
+    'host': "localhost",
     'port': 3306,
     'user': "root",
     'password': '123456',
@@ -291,8 +291,6 @@ class Charts:
             bar.add_xaxis(profit_df['小时'].unique().tolist())
             df = profit_df.groupby('小时').sum()[['偏差处理/主动套利盈亏', '盈亏类型']]
             df_1 = df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).tolist()
-            print(df)
-            print(df_1)
             bar.add_yaxis('偏差处理盈亏+', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='blue'))
             bar.add_yaxis('偏差处理盈亏-', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] > 0), 0).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='red'))
             bar.add_yaxis('主动套利盈亏+', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] == 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='green'))
@@ -313,10 +311,11 @@ class Charts:
         elif mode == '交易日-运行日':
             bar = Bar(init_opts=opts.InitOpts(theme=ThemeType.WALDEN))
             bar.add_xaxis(profit_df['小时'].unique().tolist())
-            bar.add_yaxis('偏差处理盈亏+', profit_df['偏差处理/主动套利盈亏'][(profit_df['盈亏类型'] == 0) & (profit_df['偏差处理/主动套利盈亏'] >= 0)].tolist(), itemstyle_opts=opts.ItemStyleOpts(color='blue'))
-            bar.add_yaxis('偏差处理盈亏-', profit_df['偏差处理/主动套利盈亏'][(profit_df['盈亏类型'] == 0) & (profit_df['偏差处理/主动套利盈亏'] <= 0)].tolist(),itemstyle_opts=opts.ItemStyleOpts(color='red'))
-            bar.add_yaxis('主动套利盈亏+', profit_df['偏差处理/主动套利盈亏'][(profit_df['盈亏类型'] == 1) & (profit_df['偏差处理/主动套利盈亏'] >= 0)], itemstyle_opts=opts.ItemStyleOpts(color='green'))
-            bar.add_yaxis('主动套利盈亏-', profit_df['偏差处理/主动套利盈亏'][(profit_df['盈亏类型'] == 1) & (profit_df['偏差处理/主动套利盈亏'] <= 0)], itemstyle_opts=opts.ItemStyleOpts(color='pink'))
+            df = profit_df
+            bar.add_yaxis('偏差处理盈亏+', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='blue'))
+            bar.add_yaxis('偏差处理盈亏-', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] > 0), 0).tolist(),itemstyle_opts=opts.ItemStyleOpts(color='red'))
+            bar.add_yaxis('主动套利盈亏+', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] == 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='green'))
+            bar.add_yaxis('主动套利盈亏-', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] == 0) | (df['偏差处理/主动套利盈亏'] > 0), 0).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='pink'))
             bar.set_global_opts(legend_opts=opts.LegendOpts(type_="scroll", pos_right="0",pos_top='5%',orient="vertical"),
                                 title_opts=opts.TitleOpts(title_textstyle_opts=opts.TextStyleOpts(font_size=23),pos_left='center', title='盈亏结果(交易日:'+ str(profit_df.iloc[0].交易日) + '---运行日:' + str(profit_df.iloc[0].运行日) + ')',subtitle = '总盈亏:'+ str(profit_df['总盈亏(万元)'].sum().round(3)) + '万元    '
                                                                       +'偏差处理盈亏:' + str(profit_df['偏差处理/主动套利盈亏'][df_profit['盈亏类型'] == 0].sum().round(3)) + '元    '
