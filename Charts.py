@@ -551,7 +551,7 @@ def draw_jjkj_curve(df_compete, date_list):
 
 
 if __name__ == '__main__':
-    conn = connect("localhost", 3306, "user", '123456','data')
+    conn = connect("192.168.1.3", 3306, "user", '123456','data')
     # price_jjkj = ch.draw_price_jjkj()  # 绘制价格与竞价空间
     # price_jjkj_html = price_jjkj.render_embed()
     st.set_page_config(layout="wide")
