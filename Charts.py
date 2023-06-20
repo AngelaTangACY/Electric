@@ -1,6 +1,5 @@
 from pyecharts.charts import Line, Page, Grid, Bar, Scatter, Scatter3D
 import pyecharts.options as opts
-from pyecharts.faker import Faker
 from pyecharts.charts import *
 from pyecharts.globals import ThemeType, RenderType
 import pymysql
@@ -20,15 +19,8 @@ from openpyxl import load_workbook
 import openpyxl
 from dateutil.relativedelta import relativedelta
 from scipy.signal import savgol_filter
-
-mysql_setting = {
-    'host': "localhost",
-    'port': 3306,
-    'user': "root",
-    'password': '123456',
-    'database': 'data',
-    'charset': 'utf8'
-}
+import sqlite3
+from sqlalchemy import create_engine
 
 file_setting = {
     'predict': 'D:\Python\Electric\预测价格.xlsx'
@@ -36,14 +28,8 @@ file_setting = {
 
 
 class Charts:
-    def __init__(self, host, port, user, password, database):
-        self.connect = pymysql.connect(host=host,
-                                       port=port,
-                                       user=user,
-                                       password=password,
-                                       database=database,
-                                       charset='utf8')
-        self.cursor = self.connect.cursor()
+    def __init__(self):
+        self.connect = sqlite3.connect('D:\Python\Electric\data.db')
 
     # 绘制日前市场供需情况:省内负荷、外送、新能源、竞价空间图
     # 绘制市场价格趋势(实时价格、日前价格)
@@ -102,123 +88,6 @@ class Charts:
 
     # 绘制交易结果（折线图：最高价、最低价、成交均价、加权价、日前价格(压缩平均)；柱状图：总交易量(日均)、交易电量(日均)）
     def draw_trade_result(self, trade_df):
-        # option = {
-        #     "tooltip": {
-        #         "trigger": 'axis'
-        #     },
-        #     "legend": {
-        #         "data": ['最高价', '最低价', '日前价格(压缩平均)','成交均价', '加权价']
-        #     },
-        #     "xAxis": [
-        #         {
-        #             "type": 'category',
-        #             "data": trade_df['时段'].tolist(),
-        #             "axisTick": {
-        #                 "alignWithLabel": True
-        #             }
-        #         }
-        #     ],
-        #     "yAxis": [
-        #         {
-        #             "type": 'value',
-        #             "axisLabel": {
-        #                 "formatter": '{value} '
-        #             }
-        #         }
-        #     ],
-        #     "series":[
-        #         {
-        #             "name":'最高价',
-        #             "type":'line',
-        #             "data":trade_df['最高价'].tolist(),
-        #             "symbolSize":1,
-        #             "lineStyle":{
-        #                 "width":2
-        #             }
-        #         },
-        #         {
-        #             "name": '最低价',
-        #             "type": 'line',
-        #             "data": trade_df['最低价'].tolist(),
-        #             "symbolSize": 1,
-        #             "lineStyle": {
-        #                 "width": 2
-        #             }
-        #         },
-        #         {
-        #             "name": '日前价格(压缩平均)',
-        #             "type": 'line',
-        #             "data": trade_df['日前价格(压缩平均)'].tolist(),
-        #             "symbolSize": 1,
-        #             "lineStyle": {
-        #                 "width": 2,
-        #                 "type": 'dashed'
-        #             }
-        #         },
-        #         {
-        #             "name": '成交均价',
-        #             "type": 'line',
-        #             "data": trade_df['交易电价'].tolist(),
-        #             "symbol": 'triangle',
-        #             "symbolSize": 15,
-        #             "lineStyle": {
-        #                 "width": 0
-        #             },
-        #             "itemStyle":{
-        #                 "color": 'black'
-        #             }
-        #         },
-        #         {
-        #             "name": '加权价',
-        #             "type": 'line',
-        #             "data": trade_df['加权价格'].tolist(),
-        #             "symbolSize": 1,
-        #             "lineStyle": {
-        #                 "width": 2,
-        #             }
-        #         },
-        #         {
-        #
-        #             "name": '加权价',
-        #             "type": 'line',
-        #             "data": trade_df['加权价格'].tolist(),
-        #             "symbolSize": 1,
-        #             "lineStyle": {
-        #                 "width": 2,
-        #             }
-        #         },
-        #         {
-        #             "name": '总交易量(日均)',
-        #             "type": 'bar',
-        #             "barWidth": '50%',
-        #             "data": trade_df['总交易量(日均)'].tolist(),
-        #             "z":0
-        #         },
-        #         {
-        #             "name": '交易电量(日均)',
-        #             "type": 'bar',
-        #             "barWidth": '50%',
-        #             "data": trade_df['交易电量(日均)'].tolist(),
-        #             "z": 0,
-        #             "itemStyle": {
-        #                 "normal": {
-        #                     "color": """
-        #                     function(params) {
-        #                         var index_color = params.value;
-        #                         if (index_color >= 0){
-        #                             return '#fe4365';
-        #                         }else {
-        #                             return '#25daba';
-        #                         }
-        #                     }
-        #                     """
-        #                 }
-        #             }
-        #         }
-        #     ]
-        # }
-        #
-
         ##############################################################################################################
         line = Line(init_opts=opts.InitOpts(theme=ThemeType.DARK))  # 主题
         trade_df_rep = trade_df.fillna(0)
@@ -247,27 +116,7 @@ class Charts:
                       itemstyle_opts=opts.ItemStyleOpts(color='green'))
         bar.add_yaxis('交易电量(日均)-', y_axis=trade_df_rep['交易电量(日均)'].mask(trade_df_rep['交易电量(日均)'] >= 0, 0).tolist(), z=0,
                       itemstyle_opts=opts.ItemStyleOpts(color='red'))
-        # bar.extend_axis(yaxis=opts.AxisOpts(name='电价',position="right", axislabel_opts=opts.LabelOpts(formatter="{value}")
-        # ,max_=JsCode("""
-        #             function (value) {
-        #             if (Math.abs(value.max) > Math.abs(value.min)) {
-        #                 return (Math.abs(value.max) * 1.2).toFixed(2);
-        #             } else {
-        #                 return (Math.abs(value.min) * 1.2).toFixed(2);
-        #             }
-        #             }
-        #             """
-        #         ),
-        #         min_=JsCode("""
-        #         function (value) {
-        #             if (Math.abs(value.max) > Math.abs(value.min)) {
-        #                 return (-Math.abs(value.max) * 1.2).toFixed(2);
-        #             } else {
-        #                 return (-Math.abs(value.min) * 1.2).toFixed(2);
-        #             }
-        #             }
-        #         """)
-        # ))
+
         bar.set_global_opts(legend_opts=opts.LegendOpts(type_="scroll", pos_right="0", pos_top='5%', orient="vertical"),
                             title_opts=opts.TitleOpts(pos_left='center',  # text_align='center',
                                                       subtitle='总交易电量:' + str(
@@ -282,26 +131,6 @@ class Charts:
                             yaxis_opts=opts.AxisOpts(is_show=True,  # name='电量',
                                                      axisline_opts=opts.AxisLineOpts(is_show=True),
                                                      axistick_opts=opts.AxisTickOpts(is_show=True)
-
-                                                     #   max_=JsCode("""
-                                                     #     function (value) {
-                                                     #     if (Math.abs(value.max) > Math.abs(value.min)) {
-                                                     #         return (Math.abs(value.max) * 1.2).toFixed(2);
-                                                     #     } else {
-                                                     #         return (Math.abs(value.min) * 1.2).toFixed(2);
-                                                     #     }
-                                                     #     }
-                                                     #     """
-                                                     # ),
-                                                     # min_=JsCode("""
-                                                     # function (value) {
-                                                     #     if (Math.abs(value.max) > Math.abs(value.min)) {
-                                                     #         return (-Math.abs(value.max) * 1.2).toFixed(2);
-                                                     #     } else {
-                                                     #         return (-Math.abs(value.min) * 1.2).toFixed(2);
-                                                     #     }
-                                                     #     }
-                                                     # """)
                                                      ))
         bar.set_series_opts(label_opts=opts.LabelOpts(is_show=False))
 
@@ -312,20 +141,6 @@ class Charts:
         if mode == '运行日':
             bar = Bar(init_opts=opts.InitOpts(theme=ThemeType.WALDEN))
             bar.add_xaxis(profit_df['小时'].unique().tolist())
-
-            # df = profit_df.groupby('小时').sum()[['盈亏类型', '交易电量(日均)', '交易电费']]
-            # df['日前价格(压缩平均)'] = profit_df.groupby('小时').mean()[['日前价格(压缩平均)']]
-            # df['偏差处理/主动套利盈亏'] = df['日前价格(压缩平均)']*df['交易电量(日均)'] - df['交易电费']
-            # df_1 = df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).tolist()
-            # bar.add_yaxis('偏差处理盈亏+', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).round(3).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='blue'))
-            # bar.add_yaxis('偏差处理盈亏-', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] > 0), 0).round(3).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='red'))
-            # bar.add_yaxis('主动套利盈亏+', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] == 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).round(3).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='green'))
-            # bar.add_yaxis('主动套利盈亏-', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] == 0) | (df['偏差处理/主动套利盈亏'] > 0), 0).round(3).tolist(), itemstyle_opts=opts.ItemStyleOpts(color='yellow'))
-            # bar.set_global_opts(legend_opts=opts.LegendOpts(type_="scroll", pos_right="0",pos_top='5%',orient="vertical"),
-            #                      title_opts=opts.TitleOpts(title_textstyle_opts=opts.TextStyleOpts(font_size=23),pos_left='center', title='盈亏结果(运行日:'+ str(profit_df.iloc[0].运行日)+')',
-            #                                                subtitle = '总盈亏:'+ str((df['偏差处理/主动套利盈亏'].sum()/10000).round(3)) + '万元    '
-            #                                                           +'偏差处理盈亏:' + str(df['偏差处理/主动套利盈亏'][df['盈亏类型'] == 0].sum().round(1)) + '元    '
-            #                                                           +'主动套利盈亏:' + str(df['偏差处理/主动套利盈亏'][df['盈亏类型'] > 0].sum().round(1)) + '元',
             df = profit_df.groupby('小时').sum()[['偏差处理/主动套利盈亏', '盈亏类型']]
             bar.add_yaxis('偏差处理盈亏+', df['偏差处理/主动套利盈亏'].mask((df['盈亏类型'] != 0) | (df['偏差处理/主动套利盈亏'] < 0), 0).tolist(),
                           itemstyle_opts=opts.ItemStyleOpts(color='    #4169E1'))
@@ -379,8 +194,6 @@ class Charts:
                                                    + '主动套利盈亏:' + str(
                                               profit_df['偏差处理/主动套利盈亏'][df_profit['盈亏类型'] == 1].sum().round(3)) + '元',
                                           subtitle_textstyle_opts=opts.TextStyleOpts(font_size=20)),
-                # tooltip_opts=opts.TooltipOpts(trigger='axis'),
-                # toolbox_opts=opts.ToolboxOpts(),
                 xaxis_opts=opts.AxisOpts(),
                 yaxis_opts=opts.AxisOpts(is_show=True,
                                          axisline_opts=opts.AxisLineOpts(is_show=True),
@@ -726,18 +539,6 @@ class Charts:
             )
             line2.set_series_opts(label_opts=opts.LabelOpts(is_show=False))
 
-        # 用已有的 (x, y) 去拟合 piecewise_linear 分段函数
-        # p, e = optimize.curve_fit(self.piecewise_linear, x_oldData, y_oldData)
-        # 用已有的 (x, y) 去拟合 piecewise_linear3 分段函数
-        # p, e = optimize.curve_fit(self.piecewise_linear3, x_oldData, y_oldData, bounds=(0, [16, 16, 120, 120, 10, 10]))
-        # yinterp = np.interp(x_oldData, x_oldData, y_oldData)
-        # xd = np.linspace(0, 15, 100)
-        # line2 = (
-        #     Line()
-        #         .add_xaxis(xd)
-        #         .add_yaxis('分段拟合曲线', self.piecewise_linear(xd, *p), is_smooth=True, is_symbol_show=False)
-        # )
-
         return scat, line2
 
     def moving_average(self, interval, windowsize):
@@ -942,7 +743,7 @@ class Charts:
 
     def search_sim_dateList(self, date_base, refer):
         sql = "select 运行日期, 竞价容量比最大, 竞价容量比最小, 竞价容量比平均 from `能源日前均值`"
-        df_avg = pd.read_sql(sql, ch.connect).dropna()
+        df_avg = pd.read_sql_query(sql, ch.connect).dropna()
         df_avg = df_avg[pd.to_datetime(df_avg['运行日期']) < pd.to_datetime(date_base)]
         df_avg['最大差值'] = df_avg['竞价容量比最大'].map(lambda x: abs(x - refer['竞价容量比最大'].values).round(4))
         df_avg['最小差值'] = df_avg['竞价容量比最小'].map(lambda x: abs(x - refer['竞价容量比最小'].values).round(4))
@@ -954,9 +755,9 @@ class Charts:
 
     def search_sim_line(self, date_base, refer):
         sql = "select 运行日期, 时间, 竞价容量比, 日前均价 from `总表(无历史数据)`"
-        data = pd.read_sql(sql, ch.connect).dropna()
+        data = pd.read_sql_query(sql, ch.connect).dropna()
 
-        end_date = (date_base + relativedelta(months=-2)).strftime('%Y-%m-%d')
+        end_date = (datetime.datetime.strptime(date_base,"%Y-%m-%d") + relativedelta(months=-2)).strftime('%Y-%m-%d')
         refer.index = list(range(0, 96))
         refer_data = {'{}'.format(date_base):refer}
         df_sim = pd.DataFrame(data = refer_data, columns=list(range(0, 95)))
@@ -972,15 +773,11 @@ class Charts:
 
 
 if __name__ == '__main__':
-    ch = Charts(mysql_setting['host'], mysql_setting['port'], mysql_setting['user'], mysql_setting['password'],
-                mysql_setting['database'])
-    # price_jjkj = ch.draw_price_jjkj()  # 绘制价格与竞价空间
-    # price_jjkj_html = price_jjkj.render_embed()
+    ch = Charts()
     st.set_page_config(layout="wide")
     agree = st.sidebar.radio('请选择显示项', ('市场动态', '市场分析'), index=1)
     scdt = st.sidebar.selectbox('市场动态', ['信息看板', '交易结果'], index=1)
     scfx = st.sidebar.selectbox('市场分析', ['现货价格分析', '竞价空间分析', '价格预测'], index=2)
-    # events = {'click':'function(params){return params.name}'}
 
     c21, c22 = st.columns(2)
     c31, c32, c33 = st.columns(3)
@@ -989,7 +786,7 @@ if __name__ == '__main__':
     if agree == '市场动态':
         if scdt == '信息看板':
             sql = "select * from 总表 where 预测 = 0"
-            df_info_board = pd.read_sql(sql, ch.connect)
+            df_info_board = pd.read_sql_query(sql, ch.connect)
             df_info_board['运行时间'] = df_info_board['运行日期'].map(str) + ' ' + df_info_board['时间'].map(str)
             begin_date = c21.selectbox('开始日期', df_info_board['运行日期'].sort_values(ascending=False).unique().tolist(),
                                        index=0)
@@ -1004,7 +801,7 @@ if __name__ == '__main__':
 
         elif scdt == '交易结果':
             sql = "select * from 滚动交易"
-            df_trade_result = pd.read_sql(sql, ch.connect)
+            df_trade_result = pd.read_sql_query(sql, ch.connect)
             trade_date = c21.selectbox('交易日', df_trade_result['交易日'].sort_values(ascending=False).unique().tolist(),
                                        index=0)
             run_date = c22.selectbox('运行日',
@@ -1040,7 +837,7 @@ if __name__ == '__main__':
         if scfx == '现货价格分析':
             tab1, tab2, tab3 = st.tabs(['📈日前或实时价格', '📈日前实时价格对比', '📈价格与竞价空间趋势'])
             sql = "select * from 总表 where 预测 = 0"
-            df_info_price = pd.read_sql(sql, ch.connect)
+            df_info_price = pd.read_sql_query(sql, ch.connect)
 
             with tab1:
                 t1_cc51, t1_cc52, t1_cc53, t1_cc54, t1_cc55 = tab1.columns([1, 1, 2, 2, 1])
@@ -1116,7 +913,7 @@ if __name__ == '__main__':
         elif scfx == '竞价空间分析':
             tab1, tab2 = st.tabs(['供给曲线拟合-竞价空间', '竞价空间分析'])
             sql = "select * from 总表 where 预测 = 0"
-            df_info_compete = pd.read_sql(sql, ch.connect)
+            df_info_compete = pd.read_sql_query(sql, ch.connect)
 
             with tab1:
                 c21, c22 = st.columns(2)
@@ -1154,7 +951,8 @@ if __name__ == '__main__':
             st.header('价格复盘')
             c41, c42, c43, c44 = st.columns(4)
             sql1 = 'select 运行日期, 预测日期, 预测, 时间, 小时, 竞价容量比, 日前价格 from 总表'
-            df_sim = pd.read_sql(sql1, ch.connect)
+            df_sim = pd.read_sql_query(sql1, ch.connect)
+            print(df_sim.dtypes)
             sim_match_date = c41.selectbox('运行日', df_sim['预测日期'].sort_values(ascending=False).unique().tolist(),index=0)
             sim_predict_dateList = c42.multiselect('预测日', df_sim['预测日期'][(pd.to_datetime(df_sim['运行日期']) == pd.to_datetime(sim_match_date)) & (df_sim['预测'] != 0)].sort_values(ascending=False).unique().tolist(), df_sim['预测日期'][(pd.to_datetime(df_sim['运行日期']) == pd.to_datetime(sim_match_date)) & (df_sim['预测'] != 0)].sort_values(ascending=False).unique().tolist()[0])
             mode = c43.radio('模式', ('相似日', '日期范围'), index=0)
@@ -1167,11 +965,6 @@ if __name__ == '__main__':
                 df_predict_percent.name = '{}->{}竞价容量比'.format(p, sim_match_date)
                 c31, c32, c33 = st.columns(3)
                 if mode == '相似日':
-                    # refer_data = {'竞价容量比最大':[df_predict_percent.max()],
-                    #          '竞价容量比最小':[df_predict_percent.min()],
-                    #          '竞价容量比平均':[df_predict_percent.mean()]}
-                    # refer = pd.DataFrame(refer_data)
-                    # dateList = ch.search_sim_dateList(p, refer)
                     dateList = ch.search_sim_line(p, df_predict_percent)
                     sim_predict_dateList = c31.multiselect('{}->{}相似日'.format(p, sim_match_date), dateList, dateList[0])
                     df_refer = df_sim[['竞价容量比', '日前价格']][(pd.to_datetime(df_sim['预测日期']) == pd.to_datetime(p)) & (df_sim['预测']==0)]
@@ -1193,42 +986,11 @@ if __name__ == '__main__':
                 elif mode == '日期范围':
                     a = 1
 
-                # sim_date = c41.multiselect('未来{}天相似日'.format(i),)
-                # sim_order = c42.select('预测阶数', list(range(2, 41)), index = 0)
-            # df_sim_exec = df_sim['竞价容量比'][(pd.to_datetime(df_sim['运行日期']) == pd.to_datetime(sim_match_date)) & (df_info_price['预测'] == 1)]
-            # df_sim_exec.name = '{}昨日预测竞价容量比'.format(sim_match_date)
-            # df_sim_actual = df_sim
-            # c31, c32, c33 = st.columns(3)
-            # with c31:
-
-            # sql1 = "select 运行日期, 竞价容量比最大, 竞价容量比最小, 竞价容量比平均 from `能源日前均值`"
-            # df_avg = pd.read_sql(sql1, ch.connect).dropna()
-            # sql2 = 'select 运行日期, 时间, 小时, 竞价容量比, 日前价格 from `总表(无历史数据)`'
-            # # sql2 = "select 运行日期, 预测时间, 预测, 时间, 小时, 竞价容量比, 日前价格 from 总表 where 预测 = 0"
-            # df_sim = pd.read_sql(sql2, ch.connect).dropna()
-            # refer = df_avg[['竞价容量比最大','竞价容量比最小', '竞价容量比平均']][pd.to_datetime(df_avg['运行日期']) == pd.to_datetime(sim_match_date)]
-            # df_avg = df_avg[pd.to_datetime(df_avg['运行日期']) <= pd.to_datetime(sim_match_date)]
-            # df_avg['最大差值'] = df_avg['竞价容量比最大'].map(lambda x: abs(x - refer['竞价容量比最大'].values).round(4))
-            # df_avg['最小差值']=df_avg['竞价容量比最小'].map(lambda x: abs(x - refer['竞价容量比最小'].values).round(4))
-            # df_avg['均值差值']=df_avg['竞价容量比平均'].map(lambda x: abs(x - refer['竞价容量比平均'].values).round(4))
-            # df_avg['加权差值']=df_avg.apply(lambda x: (x['最大差值'] +  x['最小差值'] +  x['均值差值']).round(4), axis=1)
-            # df_avg.sort_values(by='加权差值', ascending=True,inplace=True)
-            # sim_dateList = c42.multiselect('相似日', df_avg['运行日期'].tolist(), df_avg['运行日期'].tolist()[0])
-            # # sim_refer_date = c42.select('参照日', df_info_price['预测日期'][(pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(sim_match_date)) & (df_info_price['预测'] != 0)].sort_values(ascending=False).unique().tolist(), index = 0)
-            # sim_MonthList = c43.multiselect('同期相似日', df_avg['运行日期'][pd.to_datetime(df_avg['运行日期']).dt.month == sim_match_date.month].tolist(), df_avg['运行日期'][pd.to_datetime(df_avg['运行日期']).dt.month == sim_match_date.month].tolist()[0])
-            # # sim_MonthList = c43.multiselect('参照日-同期相似日', df_avg['运行日期'][pd.to_datetime(df_avg['运行日期']).dt.month == sim_refer_date.month].tolist(), df_avg['运行日期'][pd.to_datetime(df_avg['运行日期']).dt.month == sim_refer_date.month].tolist()[0])
-            # sim_order = c44.selectbox('阶数', list(range(1, 41)), index=0)
-            # c21, c22 = st.columns(2)
-            # e_sim = ch.draw_price_similar(df_sim, sim_MonthList)
-            # with c21:
-            #     st_pyecharts(e_sim, theme=ThemeType.WALDEN, height='600px')
-            # st.write(refer)
-            # st.write(df_avg)
             #######################################################################################################################
             st.header('预测价格')
             c41, c42, c43, c44 = st.columns(4)
             sql1 = 'select 运行日期, 预测日期, 预测, 时间, 小时, 竞价容量比, 日前价格 from 总表'
-            df_pre = pd.read_sql(sql1, ch.connect)
+            df_pre = pd.read_sql_query(sql1, ch.connect)
             predict_date = c41.selectbox('预测日期', df_pre['预测日期'].sort_values(ascending=False).unique().tolist(),index=0)
             exec_dateList = df_pre['运行日期'][pd.to_datetime(df_pre['预测日期']) == pd.to_datetime(predict_date)].sort_values().unique().tolist()
             if len(exec_dateList) != 1:
@@ -1260,149 +1022,3 @@ if __name__ == '__main__':
                         st_pyecharts(e_scat, theme=ThemeType.WALDEN, height='400px')
                     with c33:
                         st_pyecharts(e_line2, theme=ThemeType.WALDEN, height='400px')
-            #######################################################################################################################
-            # c21, c22 = st.columns(2)
-            # sql = "select 运行日期, 预测日期, 时间, 小时, 竞价容量比, 竞价空间, `日前价格`, 预测 from 总表 where 竞价容量比 is not NULL"
-            # df_info_price = pd.read_sql(sql, ch.connect)
-            #
-            # date = c21.selectbox('请选择日期', df_info_price['预测日期'].sort_values(ascending=False).unique().tolist(), index=0)
-            # # date = pd.datetime.strptime('2023-06-08', '%Y-%m-%d')
-            # is_doc = c22.radio('是否使用本地记录', ('是', '否'), index=0)
-            # df_price = df_info_price[['竞价容量比', '日前价格']][
-            #     (pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(date)) & (df_info_price['预测'] == 0)]
-            # df_price.columns = ['{}_竞价容量比'.format(date), '{}_日前价格'.format(date)]
-            # df_price.sort_values(by='{}_竞价容量比'.format(date), inplace=True)
-            # exec_dateList = df_info_price['运行日期'][
-            #     pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(date)].unique().tolist()
-            # for i in range(1, len(exec_dateList)):
-            #     if i > 3:
-            #         break
-            #     df_price.insert(loc=i * 2, column='{}_竞价容量比'.format(exec_dateList[i]), value=df_info_price['竞价容量比'][
-            #         (pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(exec_dateList[i])) & (
-            #                 df_info_price['预测'] == i)].tolist())
-            #     df_price['{}_日前价格'.format(exec_dateList[i])] = ""
-            # df_price.index = list(range(0, 96))
-            # for i in range(2, df_price.shape[1], 2):
-            #     for j in range(0, 96):
-            #         find_data = df_price.iloc[j, i]
-            #         reference_df = df_price.iloc[:, 0]
-            #         df_price.iloc[j, i + 1] = df_price.iloc[
-            #             (reference_df - find_data).abs().sort_values().index[0], 1]
-            #
-            # if is_doc == '否':
-            #     df_ref = df_price
-            # elif is_doc == '是':
-            #     file = file_setting['predict']
-            #     is_exists = os.path.exists(file)
-            #     sheet = date.strftime('%Y-%m-%d')
-            #     if (is_exists) and (sheet in pd.ExcelFile(file).sheet_names):
-            #         db = pd.read_excel(file, sheet_name=sheet)
-            #         df_ref = db
-            #     else:
-            #         if not is_exists:
-            #             wb = openpyxl.Workbook()
-            #             wb.save(file)
-            #         df_ref = df_price
-            #         writer = pd.ExcelWriter(file, mode="a", engine="openpyxl", if_sheet_exists="replace")
-            #         pd.DataFrame(df_ref).to_excel(writer, sheet_name=sheet, index=False)
-            #         writer.save()
-            #
-            # e_scat, e_price = ch.draw_profit_price(df_ref)
-            # with c21:
-            #     st_pyecharts(e_scat, theme=ThemeType.WALDEN, height='600px')
-            # with c22:
-            #     st_pyecharts(e_price, theme=ThemeType.WALDEN, height='600px')
-            #######################################################################################################################
-            # # dic = {'竞价空间': df_info_price['竞价空间'][
-            # #     (pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(date)) & (df_info_price['预测'] == 0)],
-            # #        '竞价容量比': df_info_price['竞价容量比'][
-            # #            (pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(date)) & (df_info_price['预测'] == 0)],
-            # #        '日前价格': df_info_price['日前价格'][
-            # #            (pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(date)) & (df_info_price['预测'] == 0)],
-            # #        '运行日期': [date.strftime('%Y-%m-%d')] * 96}
-            # # df_price_modify = pd.DataFrame(dic)
-            # # df_price_modify.index = list(range(0, 96))
-            # # datelist = [date]
-            # # e_compete, e_compete_percent, e_compete_3d = ch.draw_jjkj_curve(df_price_modify, datelist)
-            # # st_pyecharts(e_compete_percent, theme=ThemeType.WALDEN, height='600px')
-            # c41, c42, c43, c44 = st.columns(4)
-            # match_date = c41.selectbox('拟合日期', df_info_price['预测日期'].sort_values(ascending=False).unique().tolist(),
-            #                            index=0)
-            # refer_dateList = c42.multiselect('参考日期', df_info_price['预测日期'][
-            #     (pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(match_date)) & (
-            #             df_info_price['预测'] != 0)].sort_values(ascending=False).unique().tolist(),
-            #                                  df_info_price['预测日期'][(pd.to_datetime(
-            #                                      df_info_price['运行日期']) == pd.to_datetime(match_date)) & (
-            #                                                                df_info_price['预测'] != 0)].sort_values(
-            #                                      ascending=False).unique().tolist()[0])
-            # order = c43.selectbox('拟合阶数', list(range(1, 41)), index=2)
-            # df_price_modify = df_info_price[['竞价容量比', '日前价格']][
-            #     (pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(match_date)) & (df_info_price['预测'] == 0)]
-            # df_price_modify.columns = ['{}_竞价容量比'.format(match_date), '{}_日前价格'.format(match_date)]
-            # df_price_modify.iloc[:, 0] = df_price_modify.iloc[:, 0].apply(lambda x: x * 100).round(2)
-            # df_price_modify.index = list(range(0, 96))
-            # for d in refer_dateList:
-            #     df_temp = df_info_price[['竞价容量比', '日前价格']][
-            #         (pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(d)) & (df_info_price['预测'] == 0)]
-            #     df_temp.iloc[:, 0] = df_temp.iloc[:, 0].apply(lambda x: x * 100).round(2)
-            #     df_temp.columns = ['{}_竞价容量比'.format(d), '{}_日前价格'.format(d)]
-            #     df_temp.index = list(range(0, 96))
-            #     df_price_modify = pd.concat([df_price_modify, df_temp], axis=1)
-            #
-            #     df_temp = df_info_price[['竞价容量比']][
-            #         (pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(match_date)) & (
-            #                 pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(d))]
-            #     df_temp.iloc[:, 0] = df_temp.iloc[:, 0].apply(lambda x: x * 100).round(2)
-            #     df_temp.columns = ['{}'.format(d)]
-            #     df_temp.index = list(range(0, 96))
-            #     df_price_modify = pd.concat([df_price_modify, df_temp], axis=1)
-            #
-            # c21, c22 = st.columns(2)
-            # e_modify, e_predict = ch.draw_modify_price(df_price_modify, refer_dateList, order)
-            # with c21:
-            #     st_pyecharts(e_modify, theme=ThemeType.WALDEN, height='600px')
-            # with c22:
-            #     st_pyecharts(e_predict, theme=ThemeType.WALDEN, height='600px')
-            #
-            # #######################################################################################################################
-            # c21, c22 = st.columns(2)
-            # exec_date = c21.selectbox('运行日期', df_info_price['预测日期'].sort_values(ascending=False).unique().tolist(),
-            #                           index=0)
-            # predict_date = c22.multiselect('预测日期', df_info_price['预测日期'][
-            #     pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(exec_date)].sort_values(
-            #     ascending=False).unique().tolist(), df_info_price['预测日期'][
-            #                                    pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(
-            #                                        exec_date)].sort_values(ascending=False).unique().tolist()[0])
-            # df_value = pd.DataFrame(data=df_info_price['竞价容量比'][
-            #     (pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(exec_date)) & (
-            #             df_info_price['预测'] == 0)].tolist(),
-            #                         columns=['{}_竞价容量比'.format(exec_date)], index=list(range(0, 96)))
-            # col = 1
-            # for i in predict_date:
-            #     if i == exec_date:
-            #         df_value.insert(loc=col, column='{}_日前价格'.format(i), value=df_info_price['日前价格'][
-            #             (pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(exec_date)) & (
-            #                     df_info_price['预测'] == 0)].tolist())
-            #         col += 1
-            #     else:
-            #         df_refer = df_info_price[['竞价容量比', '日前价格']][
-            #             (pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(i)) & (df_info_price['预测'] == 0)]
-            #         df_refer.columns = ['{}_竞价容量比'.format(i), '{}_日前价格'.format(i)]
-            #         df_refer.insert(loc=2, column='{}_竞价容量比'.format(exec_date), value=df_info_price['竞价容量比'][
-            #             (pd.to_datetime(df_info_price['运行日期']) == pd.to_datetime(exec_date)) & (
-            #                     pd.to_datetime(df_info_price['预测日期']) == pd.to_datetime(i))].tolist())
-            #         df_refer['{}_日前价格'.format(exec_date)] = ""
-            #         df_refer.index = list(range(0, 96))
-            #         for j in range(0, 96):
-            #             find_data = df_refer.iloc[j, 2]
-            #             reference_df = df_refer.iloc[:, 0]
-            #             df_refer.iloc[j, 3] = df_refer.iloc[(reference_df - find_data).abs().sort_values().index[0], 1]
-            #
-            #         df_value.insert(loc=col, column='{}_预测日前价格'.format(i), value=df_refer.iloc[:, 3])
-            # df_value.drop(labels='{}_竞价容量比'.format(exec_date), axis=1, inplace=True)
-            # e_reverse = ch.draw_reverse(df_value)
-            # st_pyecharts(e_reverse, theme=ThemeType.WALDEN, height='600px')
-
-            # page = Page()
-            # page.add(energy, market_price)
-            # page.render('折线图.html')
